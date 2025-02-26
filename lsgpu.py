@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import pycuda.driver as cuda
 
 # Dictionary mapping compute capability to cores per SM
