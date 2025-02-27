@@ -36,6 +36,19 @@ tensor_cores_per_SM_dict = {
     (9, 0): 4
 }
 
+# Dictionary for RT Cores per SM by compute capability
+# Based on NVIDIA architecture documentation
+rt_cores_per_SM_dict = {
+    # Turing (7.5) - 1 RT Core per SM
+    (7, 5): 1,
+    # Ampere (8.6) - 1 RT Core per SM (2nd gen)
+    (8, 6): 1,
+    # Ada Lovelace (8.9) - 1 RT Core per SM (3rd gen)
+    (8, 9): 1,
+    # No RT cores on GA100 (8.0)
+    # Hopper (9.0) has no dedicated RT cores
+}
+
 # Dictionary for generation names by compute capability
 architecture_dict = {
     (2, 0): "Fermi",
@@ -91,6 +104,28 @@ def get_tensor_core_info(compute_capability, sm_count):
     else:
         return tensor_cores_per_sm
 
+def get_rt_core_info(compute_capability, sm_count):
+    """Get information about RT Cores based on compute capability"""
+    major, minor = compute_capability
+
+    if (major, minor) not in rt_cores_per_SM_dict:
+        return "Not available"
+
+    rt_cores_per_sm = rt_cores_per_SM_dict.get(compute_capability)
+
+    total_rt_cores = rt_cores_per_sm * sm_count
+
+    generation = ""
+    if major == 7:
+        generation = "1st gen"
+    elif major == 8:
+        if minor == 6:
+            generation = "2nd gen"
+        elif minor == 9:
+            generation = "3rd gen"
+
+    return f"{total_rt_cores} ({rt_cores_per_sm}/SM, {generation})"
+
 def print_device_info(device_id):
     try:
         device = cuda.Device(device_id)
@@ -110,8 +145,7 @@ def print_device_info(device_id):
 
         tensor_core_info = get_tensor_core_info(my_cc, my_sms)
 
-        # Get RT Core info (simplified - actual counts vary by specific GPU model)
-        rt_cores = "Available" if my_cc >= (7, 5) and my_cc != (8, 0) else "Not available"
+        rt_core_info = get_rt_core_info(my_cc, my_sms)
 
         shared_mem = device.get_attribute(cuda.device_attribute.MAX_SHARED_MEMORY_PER_BLOCK)
         shared_mem_kb = shared_mem / 1024
@@ -123,7 +157,7 @@ def print_device_info(device_id):
         print(f"  CUDA cores per SM: {cores_per_sm}")
         print(f"  Total CUDA cores: {total_cores}")
         print(f"  Tensor Cores: {tensor_core_info}")
-        print(f"  RT Cores: {rt_cores}")
+        print(f"  RT Cores: {rt_core_info}")
         print(f"  Max shared memory per block: {shared_mem_kb} KB")
         try:
             l2_cache_size = device.get_attribute(cuda.device_attribute.L2_CACHE_SIZE)
@@ -153,14 +187,11 @@ def print_device_info(device_id):
         return False
 
 def main():
-    # Check if CUDA is available
     try:
         cuda.init()
-        # Get count of devices
         device_count = cuda.Device.count()
         print(f"Found {device_count} CUDA-capable device(s)")
 
-        # Print information for each device
         for i in range(device_count):
             print_device_info(i)
 

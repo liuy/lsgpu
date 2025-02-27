@@ -1,5 +1,5 @@
 <h3 align="center">
-lsgpu is a light-weight python tool to retrival GPU information
+lsgpu is a light-weight python tool to retrieve GPU information
 </h3>
 
 ### Install Dependency
@@ -25,7 +25,7 @@ GPU 0: NVIDIA GeForce RTX 4060 Ti
   CUDA cores per SM: 128
   Total CUDA cores: 4352
   Tensor Cores: 136 (4/SM, 4th gen)
-  RT Cores: Available
+  RT Cores: 34 (1/SM, 3rd gen)
   Max shared memory per block: 48.0 KB
   L2 cache size: 32.00 MB
   Clock rate: 2565.00 MHz
