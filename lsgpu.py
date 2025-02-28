@@ -68,13 +68,32 @@ architecture_dict = {
     (9, 0): "Hopper"
 }
 
+# Dictionary mapping compute capability to memory type and clock multiplier
+memory_type_dict = {
+    (2, 0): ("GDDR5", 2),
+    (2, 1): ("GDDR5", 2),
+    (3, 0): ("GDDR5", 2),
+    (3, 5): ("GDDR5", 2),
+    (3, 7): ("GDDR5", 2),
+    (5, 0): ("GDDR5", 2),
+    (5, 2): ("GDDR5", 2),
+    (6, 0): ("HBM2", 1),
+    (6, 1): ("GDDR5X", 2),
+    (7, 0): ("HBM2", 1),
+    (7, 5): ("GDDR6", 2),
+    (8, 0): ("HBM2", 1),
+    (8, 6): ("GDDR6X", 2),
+    (8, 9): ("GDDR6X", 2),
+    (9, 0): ("HBM3", 1),
+}
+
 def get_tensor_core_info(compute_capability, sm_count):
     """Get information about Tensor Cores based on compute capability"""
     major, minor = compute_capability
 
     # Check if architecture supports Tensor Cores
     if major < 7:
-        return "Not available (pre-Volta architecture)"
+        return "Not available"
 
     # Get Tensor Cores per SM
     tensor_cores_per_sm = tensor_cores_per_SM_dict.get(compute_capability)
@@ -152,24 +171,43 @@ def print_device_info(device_id):
 
         print(f"\nGPU {device_id}: {device_name}")
         print(f"  Architecture: {architecture}")
-        print(f"  Compute capability: {my_cc[0]}.{my_cc[1]}")
+        print(f"  Compute Capability: {my_cc[0]}.{my_cc[1]}")
         print(f"  Number of SMs: {my_sms}")
-        print(f"  CUDA cores per SM: {cores_per_sm}")
-        print(f"  Total CUDA cores: {total_cores}")
+        print(f"  CUDA Cores per SM: {cores_per_sm}")
+        print(f"  Total CUDA Cores: {total_cores}")
         print(f"  Tensor Cores: {tensor_core_info}")
         print(f"  RT Cores: {rt_core_info}")
-        print(f"  Max shared memory per block: {shared_mem_kb} KB")
+        print(f"  Max Shared Memory per Block: {shared_mem_kb} KB")
         try:
             l2_cache_size = device.get_attribute(cuda.device_attribute.L2_CACHE_SIZE)
             l2_cache_mb = l2_cache_size / (1024 * 1024) if l2_cache_size > 0 else 0
             l2_cache_info = f"{l2_cache_mb:.2f} MB" if l2_cache_size > 0 else "Not available"
-            print(f"  L2 cache size: {l2_cache_info}")
+            print(f"  L2 Cache Size: {l2_cache_info}")
         except:
             pass
 
         try:
             clock_rate = device.get_attribute(cuda.device_attribute.CLOCK_RATE)
-            print(f"  Clock rate: {clock_rate / 1000:.2f} MHz")
+            print(f"  Clock Rate: {clock_rate / 1000:.2f} MHz")
+        except:
+            pass
+
+        try:
+            memory_clock_rate = device.get_attribute(cuda.device_attribute.MEMORY_CLOCK_RATE)
+            memory_clock_mhz = memory_clock_rate / 1000
+            memory_info = memory_type_dict.get(my_cc, ("Unknown", 1))
+            memory_type = memory_info[0]
+            clock_multiplier = memory_info[1]
+            memory_bus_width = device.get_attribute(cuda.device_attribute.GLOBAL_MEMORY_BUS_WIDTH)
+            memory_size = device.total_memory() / (1024 * 1024 * 1024)  # Convert to GB
+
+            print(f"  Memory Type: {memory_type}")
+            print(f"  Memory Size: {memory_size:.2f} GB")
+            print(f"  Memory Bus Width: {memory_bus_width}-bit")
+            print(f"  Effective Memory Clock Rate: {memory_clock_mhz:.2f} MHz")
+
+            memory_speed = (memory_bus_width / 8) * (memory_clock_mhz / 1000) * clock_multiplier
+            print(f"  Memory Speed: {memory_speed:.1f} GB/s")
         except:
             pass
 
@@ -177,7 +215,7 @@ def print_device_info(device_id):
             compute_mode = device.get_attribute(cuda.device_attribute.COMPUTE_MODE)
             modes = {0: "Default", 1: "Exclusive", 2: "Prohibited", 3: "Exclusive Process"}
             mode_str = modes.get(compute_mode, str(compute_mode))
-            print(f"  Compute mode: {mode_str}")
+            print(f"  Compute Mode: {mode_str}")
         except:
             pass
 
